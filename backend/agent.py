@@ -14,12 +14,10 @@ from tools import search_courses, session_label
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-PROJECT_ROOT = ROOT.parent
-OUTPUT_DIR = PROJECT_ROOT / "output"
+OUTPUT_DIR = ROOT / "output"
 AUDIT_PATH = OUTPUT_DIR / "audit_trail.json"
 
-load_dotenv(ROOT / ".env")
-load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(HERE / ".env")
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 

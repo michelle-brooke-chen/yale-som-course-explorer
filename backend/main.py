@@ -28,9 +28,7 @@ from db import DB_PATH, get_db, init_db
 from tools import QUERY_COLUMNS, all_words_clause
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
-load_dotenv(ROOT / ".env")
-load_dotenv(ROOT.parent / ".env")
+load_dotenv(HERE / ".env")
 
 init_db()
 

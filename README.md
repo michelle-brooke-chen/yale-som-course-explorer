@@ -1,25 +1,33 @@
-# Lecture 7 Project
+# Yale SOM Course Explorer
 
-A full-stack application with React + Vite + TypeScript frontend and FastAPI backend.
+Browse Yale School of Management's Fall 2026 courses and ask a chat assistant about them.
+Built with a React + Vite + TypeScript frontend and a FastAPI backend for AI Foundations, Lecture 8.
 
 ## Project Structure
 
 ```
-Lecture 7/
-├── frontend/           # React + Vite + TypeScript
+yale-som-course-explorer/
+├── frontend/              # React + Vite + TypeScript
 │   ├── src/
-│   │   ├── App.tsx
-│   │   ├── App.css
-│   │   ├── main.tsx
-│   │   └── index.css
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── index.html
-└── backend/            # FastAPI
-    ├── main.py
-    ├── requirements.txt
-    └── .env.example
+│   │   ├── App.tsx        # Sign-in gate and course catalog
+│   │   ├── AuthScreen.tsx # Sign in / create account
+│   │   ├── ChatPanel.tsx  # Course assistant with saved chats
+│   │   ├── CourseCard.tsx
+│   │   ├── CourseModal.tsx
+│   │   └── api.ts
+│   ├── index.html
+│   └── package.json
+├── backend/               # FastAPI
+│   ├── main.py            # API routes
+│   ├── agent.py           # Chat assistant
+│   ├── tools.py           # search_courses tool
+│   ├── auth.py            # bcrypt passwords and sign-in tokens
+│   ├── db.py              # Database connection and tables
+│   ├── prompts/prompt.md
+│   ├── requirements.txt
+│   └── .env.example
+└── data/
+    └── yale_som_classes.json
 ```
 
 ## Setup
