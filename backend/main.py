@@ -7,6 +7,7 @@ Frontend (Vite):    http://127.0.0.1:5173
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -32,11 +33,19 @@ load_dotenv(HERE / ".env")
 
 init_db()
 
+# Sites allowed to call the API from a browser, e.g. the Render static site URL
+ALLOWED_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+
 app = FastAPI(title="Yale SOM Courses", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

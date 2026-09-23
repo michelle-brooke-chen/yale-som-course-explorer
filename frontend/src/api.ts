@@ -1,4 +1,5 @@
-const API_BASE = "http://127.0.0.1:8000";
+// Deployed builds set VITE_API_BASE to the backend URL; locally, Vite proxies /api
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/+$/, "");
 
 export interface Course {
   id: string;

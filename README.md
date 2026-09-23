@@ -112,3 +112,25 @@ Data API can't read them; the backend's direct database connection is unaffected
 
 Signing in returns a token the frontend sends as `Authorization: Bearer <token>`;
 `/api/chat` and `/api/chats` require it.
+
+## Deploying to Render
+
+Deploy the backend first so its URL is available for the frontend.
+
+**Backend – Web Service**
+- Root Directory: `backend`
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- Health Check Path: `/api/health`
+- Environment variables: `DATABASE_URL`, `SECRET_KEY`, `PORTKEY_API_KEY`, and
+  `ALLOWED_ORIGINS` (the static site's URL, added once the frontend exists)
+
+**Frontend – Static Site**
+- Root Directory: `frontend`
+- Build Command: `npm ci && npm run build`
+- Publish Directory: `dist`
+- Environment variable: `VITE_API_BASE` set to the backend's URL, e.g.
+  `https://yale-som-course-explorer-api.onrender.com`
+
+Secrets live only in Render's environment variables and your local `backend/.env`, never
+in the repo.
