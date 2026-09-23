@@ -95,7 +95,7 @@ def get_current_user(authorization: Optional[str] = Header(default=None)) -> dic
 
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, username FROM users WHERE id = ?", (user_id,)
+            "SELECT id, username FROM users WHERE id = %s", (user_id,)
         ).fetchone()
     if row is None:
         raise HTTPException(status_code=401, detail="Please sign in.")

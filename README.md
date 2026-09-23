@@ -23,6 +23,7 @@ yale-som-course-explorer/
 │   ├── tools.py           # search_courses tool
 │   ├── auth.py            # bcrypt passwords and sign-in tokens
 │   ├── db.py              # Database connection and tables
+│   ├── seed_database.py   # Creates tables and loads courses into Supabase
 │   ├── prompts/prompt.md
 │   ├── requirements.txt
 │   └── .env.example
@@ -46,13 +47,20 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Create `.env` from `.env.example` and set `SECRET_KEY` (it signs sign-in tokens):
+3. Create `.env` from `.env.example`, then fill in:
+   - `SECRET_KEY` – signs sign-in tokens; generate one with the command below
+   - `DATABASE_URL` – your Supabase connection string (see [Database and accounts](#database-and-accounts))
 ```bash
 cp .env.example .env
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-4. Run the server:
+4. Create the tables and load the courses (first time only):
+```bash
+python seed_database.py
+```
+
+5. Run the server:
 ```bash
 python main.py
 ```
@@ -85,14 +93,22 @@ The frontend is configured to proxy API requests to the backend via `/api` route
 
 ## Database and accounts
 
-Data lives in SQLite at `data/yale_som.db`:
+Data lives in a Postgres database on [Supabase](https://supabase.com):
 
 - `courses` – the course catalog; both the course cards (`/api/courses`) and the chat agent's
-  `search_courses` tool read from it. Session dates and enrollment type were added with
-  `python backend/migrate_course_details.py`, which copies them from the original JSON.
+  `search_courses` tool read from it
 - `users` – accounts; passwords are stored as bcrypt hashes (the salt is part of the hash)
 - `chats` – each signed-in user's questions and the assistant's replies
 
-`users` and `chats` are created automatically when the backend starts. Signing in returns a
-token the frontend sends as `Authorization: Bearer <token>`; `/api/chat` and `/api/chats`
-require it.
+To connect, open your Supabase project and click **Connect**, then copy the **Session pooler**
+connection string (URI format), replace `[YOUR-PASSWORD]` with your database password, and set
+it as `DATABASE_URL` in `backend/.env`. The session pooler works on IPv4 networks; the direct
+connection needs IPv6.
+
+`seed_database.py` creates the tables, loads `courses` from `data/yale_som_classes.json`, and
+copies any users and chats from an older local SQLite file (`data/yale_som.db`) if one exists.
+Row-level security is turned on for all three tables with no policies, so Supabase's public
+Data API can't read them; the backend's direct database connection is unaffected.
+
+Signing in returns a token the frontend sends as `Authorization: Bearer <token>`;
+`/api/chat` and `/api/chats` require it.

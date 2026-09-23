@@ -51,7 +51,7 @@ def all_words_clause(text: str, columns: list[str]) -> tuple[list[str], list[str
     """
     clauses, params = [], []
     for word in _tokens(text):
-        clauses.append("(" + " OR ".join(f"{col} LIKE ?" for col in columns) + ")")
+        clauses.append("(" + " OR ".join(f"{col} ILIKE %s" for col in columns) + ")")
         params.extend([f"%{word}%"] * len(columns))
     return clauses, params
 
@@ -79,29 +79,32 @@ def search_courses(
         params += values
 
     if session:
-        clauses.append("lower(course_session) = ?")
+        clauses.append("lower(course_session) = %s")
         params.append(session.lower().strip())
 
     if category:
-        clauses.append("course_category LIKE ?")
+        clauses.append("course_category ILIKE %s")
         params.append(f"%{category.strip()}%")
 
     if day:
-        clauses.append("timings_day LIKE ?")
+        clauses.append("timings_day ILIKE %s")
         params.append(f"%{day.strip()}%")
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
     # One row per course (first section) so duplicate sections don't crowd out results
     sql = f"""
-        SELECT MIN(id) AS id, course_title, course_number, faculty_1,
-               course_category, timings_day, daytimes, course_description,
-               faculty_bio, units, course_session, room
-        FROM courses
-        {where}
-        GROUP BY course_title, course_number
-        ORDER BY MIN(id)
-        LIMIT ?
+        SELECT * FROM (
+            SELECT DISTINCT ON (course_title, course_number)
+                   id, course_title, course_number, faculty_1, course_category,
+                   timings_day, daytimes, course_description, faculty_bio, units,
+                   course_session, room
+            FROM courses
+            {where}
+            ORDER BY course_title, course_number, id
+        ) AS first_sections
+        ORDER BY id
+        LIMIT %s
     """
 
     with get_db() as conn:

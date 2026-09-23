@@ -7,13 +7,13 @@ Frontend (Vite):    http://127.0.0.1:5173
 
 from __future__ import annotations
 
-import json
-import sqlite3
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from psycopg.errors import UniqueViolation
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel, Field
 
 from agent import run_agent
@@ -24,7 +24,7 @@ from auth import (
     validate_credentials,
     verify_password,
 )
-from db import DB_PATH, get_db, init_db
+from db import get_db, init_db
 from tools import QUERY_COLUMNS, all_words_clause
 
 HERE = Path(__file__).resolve().parent
@@ -80,10 +80,10 @@ class ChatHistoryResponse(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "database": DB_PATH.name}
+    return {"ok": True, "database": "postgres"}
 
 
-def normalize_course(row: sqlite3.Row) -> dict:
+def normalize_course(row: dict) -> dict:
     """Shape a courses-table row the way the frontend expects."""
     return {
         "id": row["course_id"] or "",
@@ -128,12 +128,12 @@ def register(body: Credentials):
 
     try:
         with get_db() as conn:
-            cursor = conn.execute(
-                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            row = conn.execute(
+                "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
                 (username, hash_password(body.password)),
-            )
-            user_id = cursor.lastrowid
-    except sqlite3.IntegrityError:
+            ).fetchone()
+            user_id = row["id"]
+    except UniqueViolation:
         raise HTTPException(status_code=409, detail="That username is already taken.")
 
     return AuthResponse(token=create_token(user_id), user=User(id=user_id, username=username))
@@ -143,7 +143,7 @@ def register(body: Credentials):
 def login(body: Credentials):
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, username, password_hash FROM users WHERE username = ?",
+            "SELECT id, username, password_hash FROM users WHERE lower(username) = lower(%s)",
             (body.username.strip(),),
         ).fetchone()
 
@@ -167,10 +167,9 @@ def chat_history(user: dict = Depends(get_current_user)):
     with get_db() as conn:
         rows = conn.execute(
             """
-            SELECT id, user_message, reply, tools_used,
-                   strftime('%Y-%m-%dT%H:%M:%SZ', created_at) AS created_at
+            SELECT id, user_message, reply, tools_used, created_at
             FROM chats
-            WHERE user_id = ?
+            WHERE user_id = %s
             ORDER BY id
             """,
             (user["id"],),
@@ -181,8 +180,8 @@ def chat_history(user: dict = Depends(get_current_user)):
             id=row["id"],
             user_message=row["user_message"],
             reply=row["reply"],
-            tools_used=json.loads(row["tools_used"]),
-            created_at=row["created_at"],
+            tools_used=row["tools_used"],
+            created_at=row["created_at"].isoformat(),
         )
         for row in rows
     ])
@@ -196,8 +195,8 @@ def chat(body: ChatRequest, user: dict = Depends(get_current_user)):
 
     with get_db() as conn:
         conn.execute(
-            "INSERT INTO chats (user_id, user_message, reply, tools_used) VALUES (?, ?, ?, ?)",
-            (user["id"], body.message, reply, json.dumps(tools_used)),
+            "INSERT INTO chats (user_id, user_message, reply, tools_used) VALUES (%s, %s, %s, %s)",
+            (user["id"], body.message, reply, Jsonb(tools_used)),
         )
 
     return ChatResponse(reply=reply, tools_used=tools_used)
